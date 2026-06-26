@@ -1,12 +1,10 @@
-# LmR
+# Changelog
 
-**LmR** ("Launch my Repo") is a native macOS SwiftUI app that turns "where is that repo and how do I open it" into one glance and one click.
+All notable changes to **LmR** ("Launch my Repo") are documented here, newest first.
 
-## Download
+## [1.0.0] — 2026-06-25
 
-A signed, pre-built version is available from the [Releases](https://github.com/VladGavrila/LmR/releases) page — no Xcode build required.
-
-## What it does
+LmR ("Launch my Repo") is a native macOS dashboard for your local git repositories.
 
 - **Repo dashboard.** Point LmR at one or more folders; it scans them recursively for git repos and shows each as a card or compact list row, switchable from the toolbar.
 - **Instant filter.** Just start typing in the main window to filter repos by name, path, remote URL, branch, or tag. A status bar shows the live count.
@@ -19,12 +17,4 @@ A signed, pre-built version is available from the [Releases](https://github.com/
 - **Dock or menu bar.** Run with a Dock icon or as a menu-bar-only accessory app.
 - **Self-updating.** Checks GitHub for new releases and installs them in place.
 
-## Building
-
-Open [LmR/LmR.xcodeproj](LmR/LmR.xcodeproj) in Xcode and build the `LmR` scheme. macOS only (min. macOS 15).
-
-The pure model layer also has a standalone Swift Testing suite:
-```bash
-swift test
-```
-
+[1.0.0]: https://github.com/VladGavrila/LmR/releases/tag/v1.0.0
