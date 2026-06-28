@@ -167,7 +167,7 @@ struct LmRApp: App {
             gitStatusCache: gitStatusCache,
             onOpen: { repo, app in
                 do {
-                    try RepoOpener.open(repo, with: app)
+                    try RepoOpener.activate(repo, with: app)
                 } catch {
                     let alert = NSAlert()
                     alert.messageText = "Could not open repo"

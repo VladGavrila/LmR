@@ -2,6 +2,10 @@
 
 All notable changes to **LmR** ("Launch my Repo") are documented here, newest first.
 
+## [1.1.0] — 2026-06-28
+
+- **Open in browser button.** Repos with a web remote now show a browser button — the default browser's icon, right after Finder — on every card and list row, opening the repo's origin on the web (clicking the repo title still works too). It appears and disappears automatically as a repo gains or loses an upstream remote. In the command palette the same action is available via `⌘B` and in each repo's "Open in…" submenu.
+
 ## [1.0.0] — 2026-06-25
 
 LmR ("Launch my Repo") is a native macOS dashboard for your local git repositories.
@@ -17,4 +21,5 @@ LmR ("Launch my Repo") is a native macOS dashboard for your local git repositori
 - **Dock or menu bar.** Run with a Dock icon or as a menu-bar-only accessory app.
 - **Self-updating.** Checks GitHub for new releases and installs them in place.
 
+[1.1.0]: https://github.com/VladGavrila/LmR/releases/tag/v1.1.0
 [1.0.0]: https://github.com/VladGavrila/LmR/releases/tag/v1.0.0

@@ -16,6 +16,20 @@ enum RepoOpener {
         NSWorkspace.shared.open(httpsURL)
     }
 
+    /// Single dispatch point for activating any entry in a repo's app list,
+    /// including the two synthesized entries (Finder, Browser). Use this from
+    /// the UI/palette so the browser entry "just works" like a configured app.
+    static func activate(_ repo: GitRepo, with app: LauncherApp) throws {
+        switch app.name {
+        case LauncherApp.browserName:
+            openRemoteInBrowser(repo)
+        case LauncherApp.finderName:
+            revealInFinder(repo)
+        default:
+            try open(repo, with: app)
+        }
+    }
+
     /// Opens the repo's folder with `app` via `NSWorkspace`. Terminal apps
     /// (Terminal, iTerm, …) already `cd` into a folder handed to them this
     /// way, so no special-casing is needed.

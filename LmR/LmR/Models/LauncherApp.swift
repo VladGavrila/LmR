@@ -15,4 +15,10 @@ nonisolated struct LauncherApp: Identifiable, Codable, Hashable {
     }
 
     static let finderName = "Finder"
+
+    /// Sentinel name for the synthesized "open the repo's remote in the default
+    /// browser" entry. Like Finder, it is never stored in the user's app list —
+    /// it's built per-repo (only when the repo has a web remote) by
+    /// `BrowserLauncher` and routed specially by `RepoOpener`.
+    static let browserName = "Browser"
 }

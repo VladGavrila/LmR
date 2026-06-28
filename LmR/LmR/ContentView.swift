@@ -334,7 +334,7 @@ struct ContentView: View {
                         RepoCardView(
                             repo: repo,
                             displayName: displayNames[repo.normalizedPath] ?? repo.name,
-                            apps: launcherAppsStore.selectableApps(),
+                            apps: launcherAppsStore.selectableApps(for: repo),
                             onReveal: { RepoOpener.revealInFinder(repo) },
                             onOpenIn: { app in openRepo(repo, with: app) }
                         )
@@ -351,7 +351,7 @@ struct ContentView: View {
                 RepoRowView(
                     repo: repo,
                     displayName: displayNames[repo.normalizedPath] ?? repo.name,
-                    apps: launcherAppsStore.selectableApps(),
+                    apps: launcherAppsStore.selectableApps(for: repo),
                     onReveal: { RepoOpener.revealInFinder(repo) },
                     onOpenIn: { app in openRepo(repo, with: app) }
                 )
@@ -400,7 +400,7 @@ struct ContentView: View {
 
     private func openRepo(_ repo: GitRepo, with app: LauncherApp) {
         do {
-            try RepoOpener.open(repo, with: app)
+            try RepoOpener.activate(repo, with: app)
         } catch {
             openError = error.localizedDescription
         }

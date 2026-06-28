@@ -75,11 +75,14 @@ struct CommandPaletteView: View {
             HStack(spacing: 14) {
                 if appPickerRepo != nil {
                     hint("↵", "Open")
+                    hint("⌘1-9", "Open in app")
                     hint("Esc", "Back")
                 } else {
                     hint("↵", "Open")
+                    if selectedRepo.flatMap({ BrowserLauncher.app(for: $0) }) != nil {
+                        hint("⌘B", "Open in Browser")
+                    }
                     hint("⌘↵", "Open in…")
-                    hint("⌘1-9", "Open in app")
                 }
             }
             .font(.caption)
@@ -129,20 +132,25 @@ struct CommandPaletteView: View {
             activateDefault()
             return .handled
         }
+        .onKeyPress(keys: ["b"]) { press in
+            guard press.modifiers.contains(.command) else { return .ignored }
+            let target = appPickerRepo ?? selectedRepo
+            guard let target, let browser = BrowserLauncher.app(for: target) else { return .ignored }
+            onOpen(target, browser)
+            dismissAppPicker()
+            return .handled
+        }
         .onKeyPress(keys: ["1", "2", "3", "4", "5", "6", "7", "8", "9"]) { press in
+            // ⌘1-9 only acts inside the "Open in…" submenu (reached via ⌘↵).
             guard press.modifiers.contains(.command),
+                  let repo = appPickerRepo,
                   let digit = press.characters.first.flatMap({ Int(String($0)) }),
                   digit >= 1, digit <= 9 else { return .ignored }
+            let list = pickerApps(for: repo)
             let index = digit - 1
-            if let repo = appPickerRepo {
-                guard apps.indices.contains(index) else { return .handled }
-                onOpen(repo, apps[index])
-                dismissAppPicker()
-            } else {
-                guard results.indices.contains(selectedIndex) else { return .handled }
-                guard apps.indices.contains(index) else { return .handled }
-                onOpen(results[selectedIndex], apps[index])
-            }
+            guard list.indices.contains(index) else { return .handled }
+            onOpen(repo, list[index])
+            dismissAppPicker()
             return .handled
         }
     }
@@ -165,14 +173,6 @@ struct CommandPaletteView: View {
                     .truncationMode(.middle)
             }
             Spacer()
-            if index < 9 {
-                Text("⌘\(index + 1)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 1)
-                    .background(Color.secondary.opacity(0.15), in: RoundedRectangle(cornerRadius: 3))
-            }
             if isSelected {
                 Image(systemName: "return")
                     .foregroundStyle(.secondary)
@@ -184,7 +184,7 @@ struct CommandPaletteView: View {
         .background(isSelected ? Color.accentColor.opacity(0.18) : Color.clear)
         .onTapGesture { onOpen(repo, defaultApp) }
         .contextMenu {
-            ForEach(apps) { app in
+            ForEach(pickerApps(for: repo)) { app in
                 Button("Open in \(app.name)") { onOpen(repo, app) }
             }
         }
@@ -228,14 +228,29 @@ struct CommandPaletteView: View {
     }
 
     private func moveAppPicker(by delta: Int) {
-        guard !apps.isEmpty else { return }
-        appPickerIndex = max(0, min(apps.count - 1, appPickerIndex + delta))
+        guard let repo = appPickerRepo else { return }
+        let count = pickerApps(for: repo).count
+        guard count > 0 else { return }
+        appPickerIndex = max(0, min(count - 1, appPickerIndex + delta))
     }
 
     private func activateAppPicker() {
-        guard let repo = appPickerRepo, apps.indices.contains(appPickerIndex) else { return }
-        onOpen(repo, apps[appPickerIndex])
+        guard let repo = appPickerRepo else { return }
+        let list = pickerApps(for: repo)
+        guard list.indices.contains(appPickerIndex) else { return }
+        onOpen(repo, list[appPickerIndex])
         dismissAppPicker()
+    }
+
+    /// The "Open in…" submenu's entries for `repo`: the configured apps plus the
+    /// synthesized Browser entry (after Finder) when the repo has a web remote,
+    /// so the browser is a first-class, selectable item with its own ⌘N.
+    private func pickerApps(for repo: GitRepo) -> [LauncherApp] {
+        var list = apps
+        if let browser = BrowserLauncher.app(for: repo) {
+            list.insert(browser, at: 1)
+        }
+        return list
     }
 
     @ViewBuilder
@@ -255,7 +270,7 @@ struct CommandPaletteView: View {
             .padding(.top, 10)
             .padding(.bottom, 6)
 
-            ForEach(Array(apps.enumerated()), id: \.offset) { index, app in
+            ForEach(Array(pickerApps(for: repo).enumerated()), id: \.offset) { index, app in
                 let isSelected = index == appPickerIndex
                 let isDefault = app.id == defaultApp.id
                 HStack(spacing: 10) {

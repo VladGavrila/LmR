@@ -54,6 +54,19 @@ final class LauncherAppsStore {
             + apps.filter { !$0.appPath.isEmpty }
     }
 
+    /// Per-repo app list: like `selectableApps()`, but with the synthesized
+    /// Browser entry inserted right after Finder for repos that have a web
+    /// remote. Used by the repo cards/rows so the browser button appears (and
+    /// disappears) in step with the repo's remote — including when a rescan
+    /// gives a repo an upstream URL it didn't have before.
+    func selectableApps(for repo: GitRepo) -> [LauncherApp] {
+        var apps = selectableApps()
+        if let browser = BrowserLauncher.app(for: repo) {
+            apps.insert(browser, at: 1)
+        }
+        return apps
+    }
+
     private static func loadApps() -> [LauncherApp] {
         guard let data = UserDefaults.standard.data(forKey: AppStorageKey.launcherApps.rawValue),
               let decoded = try? JSONDecoder().decode([LauncherApp].self, from: data) else { return [] }
