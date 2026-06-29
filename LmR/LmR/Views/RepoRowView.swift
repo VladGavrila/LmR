@@ -6,6 +6,7 @@ struct RepoRowView: View {
     let apps: [LauncherApp]
     let onReveal: () -> Void
     let onOpenIn: (LauncherApp) -> Void
+    let onShowDetails: () -> Void
 
     @Environment(GitStatusCache.self) private var gitStatusCache
 
@@ -27,6 +28,9 @@ struct RepoRowView: View {
         .padding(.vertical, 7)
         .padding(.horizontal, 14)
         .contentShape(Rectangle())
+        .contextMenu {
+            Button("Show Details…") { onShowDetails() }
+        }
     }
 
     @ViewBuilder

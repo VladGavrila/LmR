@@ -16,6 +16,19 @@ enum UpdateCheckRequester {
 }
 
 @MainActor
+enum CloneSheetRequester {
+    static var present: (() -> Void)?
+}
+
+/// Bridges `AppDelegate.application(_:open:)` (Dock-icon drag-and-drop, "Open
+/// With") to `ContentView`'s folder-adding logic, which needs `FoldersStore`/
+/// `RepoStore` from the environment and so can't live in the delegate itself.
+@MainActor
+enum DockDropHandler {
+    static var handle: (([URL]) -> Void)?
+}
+
+@MainActor
 final class MenuBarStatusItem: NSObject {
     static let shared = MenuBarStatusItem()
 

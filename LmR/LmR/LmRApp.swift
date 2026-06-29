@@ -18,6 +18,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         MainWindowCloseGuard.surfaceMainWindow()
         return true
     }
+
+    /// Dropping folders onto the Dock icon routes here (also covers Finder's
+    /// "Open With" on a folder).
+    func application(_ application: NSApplication, open urls: [URL]) {
+        DockDropHandler.handle?(urls)
+    }
 }
 
 /// Intercepts the main window's close button (and ⌘W / "Close") so it hides the
@@ -138,6 +144,13 @@ struct LmRApp: App {
                 Button("Check for Updates…") {
                     Task { await updater.check(userInitiated: true) }
                 }
+            }
+            CommandGroup(after: .newItem) {
+                Button("Clone Repository…") {
+                    MainWindowCloseGuard.surfaceMainWindow()
+                    CloneSheetRequester.present?()
+                }
+                .keyboardShortcut("n", modifiers: .command)
             }
         }
 

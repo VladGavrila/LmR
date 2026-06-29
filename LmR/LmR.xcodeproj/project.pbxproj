@@ -10,11 +10,24 @@
 		A1B2C3D42FAEFB7A00EAD221 /* LmR.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LmR.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		A1B2C3D72FAEFB7A00EAD221 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = A1B2C3D32FAEFB7A00EAD221 /* LmR */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		A1B2C3D62FAEFB7A00EAD221 /* LmR */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = LmR;
 			sourceTree = "<group>";
+			exceptions = (
+				A1B2C3D72FAEFB7A00EAD221 /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
+			);
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
@@ -262,6 +275,7 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				EXECUTABLE_NAME = LmR;
+				INFOPLIST_FILE = LmR/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Launch my Repo";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -269,7 +283,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.vgdev.lmr;
 				PRODUCT_NAME = "Launch my Repo";
 				WRAPPER_NAME = LmR.app;
@@ -298,6 +312,7 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				EXECUTABLE_NAME = LmR;
+				INFOPLIST_FILE = LmR/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Launch my Repo";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -305,7 +320,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.vgdev.lmr;
 				PRODUCT_NAME = "Launch my Repo";
 				WRAPPER_NAME = LmR.app;

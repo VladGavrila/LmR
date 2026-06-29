@@ -22,7 +22,9 @@ let package = Package(
                 "GitStatusParser.swift",
                 "RemoteURLConverter.swift",
                 "RepoDisplayNames.swift",
-                "RepoSearchScorer.swift"
+                "RepoSearchScorer.swift",
+                "ClonePathPlanner.swift",
+                "GitLogParser.swift"
             ]
         ),
         .target(

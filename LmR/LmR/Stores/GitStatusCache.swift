@@ -55,23 +55,23 @@ final class GitStatusCache {
     }
 
     nonisolated private static func probe(path: String) -> GitStatusInfo {
-        let branchOutput = run(["rev-parse", "--abbrev-ref", "HEAD"], cwd: path)
+        let branchOutput = Git.run(["rev-parse", "--abbrev-ref", "HEAD"], cwd: path)
         var branch = GitStatusParser.parseBranch(branchOutput.stdout)
         if branch == nil, branchOutput.exitCode == 0 {
-            let shaOutput = run(["rev-parse", "--short", "HEAD"], cwd: path)
+            let shaOutput = Git.run(["rev-parse", "--short", "HEAD"], cwd: path)
             branch = GitStatusParser.parseDetachedHead(shaOutput.stdout)
         }
         guard branchOutput.exitCode == 0 else {
             return GitStatusInfo(state: .error)
         }
 
-        let porcelain = run(["status", "--porcelain"], cwd: path)
+        let porcelain = Git.run(["status", "--porcelain"], cwd: path)
         let isDirty = GitStatusParser.parseDirty(porcelain.stdout)
 
-        let aheadBehindOutput = run(["rev-list", "--left-right", "--count", "@{upstream}...HEAD"], cwd: path)
+        let aheadBehindOutput = Git.run(["rev-list", "--left-right", "--count", "@{upstream}...HEAD"], cwd: path)
         let aheadBehind = GitStatusParser.parseAheadBehind(aheadBehindOutput.stdout)
 
-        let lastCommitOutput = run(["log", "-1", "--date=format:%Y-%m-%d %H:%M", "--format=%s\u{1f}%cr\u{1f}%cd\u{1f}%cn"], cwd: path)
+        let lastCommitOutput = Git.run(["log", "-1", "--date=format:%Y-%m-%d %H:%M", "--format=%s\u{1f}%cr\u{1f}%cd\u{1f}%cn"], cwd: path)
         let lastCommit = GitStatusParser.parseLastCommit(lastCommitOutput.stdout)
 
         return GitStatusInfo(
@@ -84,38 +84,6 @@ final class GitStatusCache {
             lastCommitAbsoluteDate: lastCommit?.absoluteDate,
             lastCommitAuthorName: lastCommit?.authorName,
             state: isDirty ? .dirty : .clean
-        )
-    }
-
-    // MARK: - Process helper
-
-    private struct CommandResult {
-        let exitCode: Int32
-        let stdout: String
-    }
-
-    nonisolated private static let gitPath = "/usr/bin/git"
-
-    nonisolated private static func run(_ args: [String], cwd: String) -> CommandResult {
-        guard FileManager.default.isExecutableFile(atPath: gitPath) else {
-            return CommandResult(exitCode: -1, stdout: "")
-        }
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: gitPath)
-        process.arguments = ["-C", cwd] + args
-        let outPipe = Pipe()
-        process.standardOutput = outPipe
-        process.standardError = Pipe()
-        do {
-            try process.run()
-        } catch {
-            return CommandResult(exitCode: -1, stdout: "")
-        }
-        let outData = (try? outPipe.fileHandleForReading.readToEnd()) ?? Data()
-        process.waitUntilExit()
-        return CommandResult(
-            exitCode: process.terminationStatus,
-            stdout: String(data: outData, encoding: .utf8) ?? ""
         )
     }
 }

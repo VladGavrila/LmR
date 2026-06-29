@@ -6,6 +6,8 @@ struct RepoCardView: View {
     let apps: [LauncherApp]
     let onReveal: () -> Void
     let onOpenIn: (LauncherApp) -> Void
+    let onShowDetails: () -> Void
+    let onDelete: () -> Void
 
     @Environment(GitStatusCache.self) private var gitStatusCache
     @Environment(FavoritesStore.self) private var favoritesStore
@@ -30,7 +32,8 @@ struct RepoCardView: View {
             Divider()
 
             HStack(spacing: 12) {
-                tagButton
+                deleteButton
+                infoButton
                 Spacer()
                 ForEach(apps) { app in
                     appButton(for: app)
@@ -49,6 +52,37 @@ struct RepoCardView: View {
                 .strokeBorder(repoTag?.color ?? Color.clear, lineWidth: 2)
         )
         .padding(15)
+        .contextMenu {
+            Button("Show Details…") { onShowDetails() }
+        }
+    }
+
+    private var infoButton: some View {
+        Button {
+            onShowDetails()
+        } label: {
+            Image(systemName: "info.circle")
+                .resizable()
+                .scaledToFit()
+                .foregroundStyle(Color.secondary)
+                .frame(width: 14, height: 14)
+        }
+        .buttonStyle(.borderless)
+        .help("Show Details…")
+    }
+
+    private var deleteButton: some View {
+        Button {
+            onDelete()
+        } label: {
+            Image(systemName: "trash")
+                .resizable()
+                .scaledToFit()
+                .foregroundStyle(Color.secondary)
+                .frame(width: 14, height: 14)
+        }
+        .buttonStyle(.borderless)
+        .help("Remove…")
     }
 
     private var header: some View {
@@ -57,6 +91,7 @@ struct RepoCardView: View {
                 titleView
                 Spacer()
                 favoriteButton
+                tagButton
             }
             Text(repo.displayPath)
                 .font(.callout)
@@ -97,68 +132,57 @@ struct RepoCardView: View {
     }
 
     private var tagPickerPopover: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                ForEach(tagsStore.tagOrder) { tag in
-                    Button {
-                        tagsStore.set(tag, for: repo.normalizedPath)
-                        showTagPicker = false
-                    } label: {
-                        ZStack {
-                            Circle()
-                                .fill(tag.color)
-                                .frame(width: 22, height: 22)
-                            if repoTag == tag {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 11, weight: .bold))
-                                    .foregroundStyle(.white)
-                            }
+        HStack(spacing: 8) {
+            ForEach(tagsStore.tagOrder) { tag in
+                Button {
+                    tagsStore.set(tag, for: repo.normalizedPath)
+                    showTagPicker = false
+                } label: {
+                    ZStack {
+                        Circle()
+                            .fill(tag.color)
+                            .frame(width: 22, height: 22)
+                        if repoTag == tag {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(.white)
                         }
-                        .overlay(
-                            Circle().strokeBorder(Color.primary.opacity(0.12), lineWidth: 0.5)
-                        )
                     }
-                    .buttonStyle(.plain)
-                    .help(tagsStore.displayName(for: tag))
+                    .overlay(
+                        Circle().strokeBorder(Color.primary.opacity(0.12), lineWidth: 0.5)
+                    )
                 }
+                .buttonStyle(.plain)
+                .help(tagsStore.displayName(for: tag))
             }
-
-            Divider()
 
             Button {
                 tagsStore.set(nil, for: repo.normalizedPath)
                 showTagPicker = false
             } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "nosign")
-                    Text("No Tag")
-                }
-                .font(.callout)
-                .foregroundStyle(.secondary)
+                Image(systemName: "nosign")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 22, height: 22)
+                    .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
+            .help("No Tag")
         }
         .padding(10)
     }
 
-    @ViewBuilder
     private var titleView: some View {
-        let title = Text(displayName)
-            .font(.headline)
-            .lineLimit(1)
-            .truncationMode(.tail)
-
-        if let remoteURL = repo.remoteURL, let httpsURL = RemoteURLConverter.httpsURL(from: remoteURL) {
-            Button {
-                RepoOpener.openRemoteInBrowser(repo)
-            } label: {
-                title
-            }
-            .buttonStyle(.plain)
-            .help(httpsURL.absoluteString)
-        } else {
-            title
+        Button {
+            onShowDetails()
+        } label: {
+            Text(displayName)
+                .font(.headline)
+                .lineLimit(1)
+                .truncationMode(.tail)
         }
+        .buttonStyle(.plain)
+        .help("Show Details…")
     }
 
     private func appButton(for app: LauncherApp) -> some View {

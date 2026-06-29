@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import UniformTypeIdentifiers
 
 enum ReposViewMode: String {
     case card, list
@@ -26,6 +27,9 @@ struct ContentView: View {
     @State private var repoPendingRemoval: GitRepo?
     @State private var tagFilter: RepoTag?
     @State private var presentedRelease: UpdateChecker.Release?
+    @State private var isDropTargeting: Bool = false
+    @State private var isCloneSheetPresented: Bool = false
+    @State private var detailRepo: GitRepo?
 
     private var viewMode: ReposViewMode {
         ReposViewMode(rawValue: viewModeRaw) ?? .card
@@ -50,6 +54,15 @@ struct ContentView: View {
                 Button("OK") { store.loadError = nil }
             } message: { msg in
                 Text(msg)
+            }
+            .sheet(isPresented: $isCloneSheetPresented) {
+                CloneRepoSheet()
+            }
+            .sheet(item: $detailRepo) { repo in
+                RepoDetailSheet(
+                    repo: repo,
+                    displayName: displayNames[repo.normalizedPath] ?? repo.name
+                )
             }
             .sheet(item: $presentedRelease, onDismiss: {
                 if case .downloading = updater.state {
@@ -81,6 +94,11 @@ struct ContentView: View {
                 let openSettingsAction = openSettings
                 SettingsOpener.open = { openSettingsAction() }
                 UpdateCheckRequester.check = { Task { await updater.check(userInitiated: true) } }
+                CloneSheetRequester.present = { isCloneSheetPresented = true }
+                DockDropHandler.handle = { urls in
+                    MainWindowCloseGuard.surfaceMainWindow()
+                    for url in urls { addWatchedFolderIfDirectory(url) }
+                }
                 installTypeAheadMonitor()
                 DispatchQueue.main.async { MainWindowCloseGuard.installOnMainWindows() }
                 syncPresentedRelease()
@@ -231,6 +249,13 @@ struct ContentView: View {
             .navigationTitle("Launch my Repo")
             .toolbar {
                 ToolbarItemGroup(placement: .primaryAction) {
+                    Button {
+                        isCloneSheetPresented = true
+                    } label: {
+                        Label("Clone Repository…", systemImage: "plus")
+                    }
+                    .help("Clone a repository into a watched folder")
+
                     if viewMode == .card {
                         tagFilterMenu
                     }
@@ -265,6 +290,54 @@ struct ContentView: View {
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 statusBar
             }
+            .onDrop(of: [.fileURL], isTargeted: $isDropTargeting) { providers in
+                handleDrop(providers)
+            }
+            .overlay {
+                if isDropTargeting {
+                    RoundedRectangle(cornerRadius: 8)
+                        .strokeBorder(Color.accentColor, lineWidth: 3)
+                        .padding(4)
+                        .allowsHitTesting(false)
+                }
+            }
+    }
+
+    /// Accepts one or more folders dropped from Finder as new watched roots.
+    /// Reuses `FoldersStore.add` (dedupe/normalize) and `RepoStore.rescan`
+    /// (auto-add + prune) — no new persistence.
+    private func handleDrop(_ providers: [NSItemProvider]) -> Bool {
+        var accepted = false
+        for provider in providers {
+            _ = provider.loadObject(ofClass: URL.self) { url, _ in
+                guard let url else { return }
+                Task { @MainActor in addWatchedFolderIfDirectory(url) }
+            }
+            accepted = true
+        }
+        return accepted
+    }
+
+    private func addWatchedFolderIfDirectory(_ url: URL) {
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory),
+              isDirectory.boolValue else { return }
+        foldersStore.add(url.path)
+        Task { await store.rescan(folder: url, maxDepth: scanMaxDepth) }
+    }
+
+    /// Folder picker for the empty-state's "Choose a Folder…" button — the
+    /// same add-and-scan path as a Finder drop or Settings → Folders.
+    private func chooseWatchedFolder() {
+        let panel = NSOpenPanel()
+        panel.title = "Choose Folder"
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.canCreateDirectories = true
+        panel.allowsMultipleSelection = false
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        foldersStore.add(url.path)
+        Task { await store.rescan(folder: url, maxDepth: scanMaxDepth) }
     }
 
     /// Bottom status bar: count of currently displayed repos. Derived from
@@ -318,55 +391,12 @@ struct ContentView: View {
 
     @ViewBuilder
     private var reposContent: some View {
-        switch viewMode {
-        case .card: repoGrid
-        case .list: repoList
-        }
-    }
-
-    private var repoGrid: some View {
-        GeometryReader { proxy in
-            let columnCount = max(1, Int(proxy.size.width / 330))
-            let columns = Array(repeating: GridItem(.fixed(330), spacing: 0), count: columnCount)
-            ScrollView(.vertical) {
-                LazyVGrid(columns: columns, alignment: .leading, spacing: 0) {
-                    ForEach(sortedRepos) { repo in
-                        RepoCardView(
-                            repo: repo,
-                            displayName: displayNames[repo.normalizedPath] ?? repo.name,
-                            apps: launcherAppsStore.selectableApps(for: repo),
-                            onReveal: { RepoOpener.revealInFinder(repo) },
-                            onOpenIn: { app in openRepo(repo, with: app) }
-                        )
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .top)
+        Group {
+            switch viewMode {
+            case .card: repoGrid
+            case .list: repoList
             }
         }
-    }
-
-    private var repoList: some View {
-        List {
-            ForEach(sortedRepos) { repo in
-                RepoRowView(
-                    repo: repo,
-                    displayName: displayNames[repo.normalizedPath] ?? repo.name,
-                    apps: launcherAppsStore.selectableApps(for: repo),
-                    onReveal: { RepoOpener.revealInFinder(repo) },
-                    onOpenIn: { app in openRepo(repo, with: app) }
-                )
-                .listRowInsets(EdgeInsets())
-                .listRowSeparator(.visible)
-                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                    Button(role: .destructive) {
-                        repoPendingRemoval = repo
-                    } label: {
-                        Label("Remove", systemImage: "trash")
-                    }
-                }
-            }
-        }
-        .listStyle(.plain)
         .confirmationDialog(
             "Remove Repo",
             isPresented: Binding(
@@ -387,6 +417,54 @@ struct ContentView: View {
         }
     }
 
+    private var repoGrid: some View {
+        GeometryReader { proxy in
+            let columnCount = max(1, Int(proxy.size.width / 330))
+            let columns = Array(repeating: GridItem(.fixed(330), spacing: 0), count: columnCount)
+            ScrollView(.vertical) {
+                LazyVGrid(columns: columns, alignment: .leading, spacing: 0) {
+                    ForEach(sortedRepos) { repo in
+                        RepoCardView(
+                            repo: repo,
+                            displayName: displayNames[repo.normalizedPath] ?? repo.name,
+                            apps: launcherAppsStore.selectableApps(for: repo),
+                            onReveal: { RepoOpener.revealInFinder(repo) },
+                            onOpenIn: { app in openRepo(repo, with: app) },
+                            onShowDetails: { detailRepo = repo },
+                            onDelete: { repoPendingRemoval = repo }
+                        )
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .top)
+            }
+        }
+    }
+
+    private var repoList: some View {
+        List {
+            ForEach(sortedRepos) { repo in
+                RepoRowView(
+                    repo: repo,
+                    displayName: displayNames[repo.normalizedPath] ?? repo.name,
+                    apps: launcherAppsStore.selectableApps(for: repo),
+                    onReveal: { RepoOpener.revealInFinder(repo) },
+                    onOpenIn: { app in openRepo(repo, with: app) },
+                    onShowDetails: { detailRepo = repo }
+                )
+                .listRowInsets(EdgeInsets())
+                .listRowSeparator(.visible)
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button(role: .destructive) {
+                        repoPendingRemoval = repo
+                    } label: {
+                        Label("Remove", systemImage: "trash")
+                    }
+                }
+            }
+        }
+        .listStyle(.plain)
+    }
+
     private func removeAndTrash(_ repo: GitRepo) {
         let url = URL(fileURLWithPath: repo.normalizedPath)
         do {
@@ -396,6 +474,24 @@ struct ContentView: View {
             return
         }
         store.remove(path: url)
+        removeEmptyParents(of: url, stoppingAt: repo.parentFolder)
+    }
+
+    /// After trashing a repo, cleans up the now-empty intermediate folders it
+    /// left behind (e.g. cloning `org/module/part/repo` leaves `module/part`
+    /// behind once `repo` is gone). Walks upward one directory at a time,
+    /// removing each as long as it's empty, stopping at the watched root
+    /// (never removed) or the first non-empty ancestor (e.g. a sibling
+    /// `module1` folder under `org`).
+    private func removeEmptyParents(of url: URL, stoppingAt root: URL) {
+        let rootPath = root.standardizedFileURL.path
+        var parent = url.deletingLastPathComponent().standardizedFileURL
+        while parent.path != rootPath, parent.path.hasPrefix(rootPath + "/") {
+            guard let contents = try? FileManager.default.contentsOfDirectory(atPath: parent.path),
+                  contents.isEmpty else { break }
+            guard (try? FileManager.default.removeItem(at: parent)) != nil else { break }
+            parent = parent.deletingLastPathComponent().standardizedFileURL
+        }
     }
 
     private func openRepo(_ repo: GitRepo, with app: LauncherApp) {
@@ -413,13 +509,16 @@ struct ContentView: View {
                 .foregroundStyle(.secondary)
             Text("No folders watched yet")
                 .font(.title3)
-            Text("Open Settings → Folders to choose a folder to scan for repos.")
+            Text("Choose a folder or drag a folder here to scan for repos")
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-            Button("Open Settings…") { openSettings() }
+            Button("Choose a Folder…") { chooseWatchedFolder() }
         }
         .padding(32)
+        .onDrop(of: [.fileURL], isTargeted: $isDropTargeting) { providers in
+            handleDrop(providers)
+        }
     }
 
     private var noMatchesState: some View {
