@@ -75,6 +75,21 @@ final class RepoStore {
         persist()
     }
 
+    /// Updates the cached remote URL for the repo at `path` (e.g. after adding
+    /// a repo's first remote) without a full folder rescan. No-op if `path`
+    /// isn't currently indexed. Copies the existing `GitRepo` rather than
+    /// constructing a fresh one, so `id` is preserved and SwiftUI doesn't
+    /// remount the card.
+    func updateRemoteURL(_ remoteURL: String?, forPath path: URL) {
+        let target = path.standardizedFileURL.path
+        guard let existing = repos.first(where: { $0.normalizedPath == target }) else { return }
+        var updated = existing
+        updated.remoteURL = remoteURL
+        index.add(updated)
+        repos = index.repos
+        persist()
+    }
+
     private static func remoteURL(for repoRoot: URL) -> String? {
         let configURL = repoRoot.appendingPathComponent(".git/config")
         guard let text = try? String(contentsOf: configURL, encoding: .utf8) else { return nil }

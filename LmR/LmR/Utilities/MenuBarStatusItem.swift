@@ -16,7 +16,7 @@ enum UpdateCheckRequester {
 }
 
 @MainActor
-enum CloneSheetRequester {
+enum NewRepoSheetRequester {
     static var present: (() -> Void)?
 }
 

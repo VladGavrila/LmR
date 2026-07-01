@@ -24,17 +24,25 @@ let package = Package(
                 "RepoDisplayNames.swift",
                 "RepoSearchScorer.swift",
                 "ClonePathPlanner.swift",
-                "GitLogParser.swift"
+                "GitLogParser.swift",
+                "NewRepoPathPlanner.swift",
+                "EmptyDirectoryCheck.swift"
             ]
         ),
         .target(
             name: "LmRUtilities",
             path: "LmR/LmR/Utilities",
-            sources: ["SemanticVersion.swift"]
+            sources: ["SemanticVersion.swift", "Git.swift"]
+        ),
+        .target(
+            name: "LmRStores",
+            dependencies: ["LmRModels", "LmRUtilities"],
+            path: "LmR/LmR/Stores",
+            sources: ["GitStatusCache.swift"]
         ),
         .testTarget(
             name: "LmRTests",
-            dependencies: ["LmRModels", "LmRUtilities"],
+            dependencies: ["LmRModels", "LmRUtilities", "LmRStores"],
             path: "Tests/LmRTests"
         ),
     ]

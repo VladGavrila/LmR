@@ -18,7 +18,7 @@ final class RepoDetailLoader {
         let path = repo.normalizedPath
 
         let result = await Task.detached(priority: .utility) {
-            Self.fetch(path: path)
+            await Self.fetch(path: path)
         }.value
 
         guard !Task.isCancelled else { return }
@@ -36,10 +36,10 @@ final class RepoDetailLoader {
         let readme: String?
     }
 
-    nonisolated private static func fetch(path: String) -> FetchResult {
-        let logOutput = Git.run(["log", "-n", "20", "--format=%h\u{1f}%s\u{1f}%cr\u{1f}%cn"], cwd: path)
-        let branchOutput = Git.run(["branch", "--format=%(refname:short)"], cwd: path)
-        let remoteOutput = Git.run(["remote", "-v"], cwd: path)
+    nonisolated private static func fetch(path: String) async -> FetchResult {
+        let logOutput = await Git.run(["log", "-n", "20", "--format=%h\u{1f}%s\u{1f}%cr\u{1f}%cn"], cwd: path)
+        let branchOutput = await Git.run(["branch", "--format=%(refname:short)"], cwd: path)
+        let remoteOutput = await Git.run(["remote", "-v"], cwd: path)
 
         return FetchResult(
             commits: GitLogParser.parseLog(logOutput.stdout),

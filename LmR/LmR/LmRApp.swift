@@ -146,9 +146,9 @@ struct LmRApp: App {
                 }
             }
             CommandGroup(after: .newItem) {
-                Button("Clone Repository…") {
+                Button("New Repository…") {
                     MainWindowCloseGuard.surfaceMainWindow()
-                    CloneSheetRequester.present?()
+                    NewRepoSheetRequester.present?()
                 }
                 .keyboardShortcut("n", modifiers: .command)
             }

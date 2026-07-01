@@ -28,7 +28,7 @@ struct ContentView: View {
     @State private var tagFilter: RepoTag?
     @State private var presentedRelease: UpdateChecker.Release?
     @State private var isDropTargeting: Bool = false
-    @State private var isCloneSheetPresented: Bool = false
+    @State private var isNewRepoSheetPresented: Bool = false
     @State private var detailRepo: GitRepo?
 
     private var viewMode: ReposViewMode {
@@ -55,8 +55,8 @@ struct ContentView: View {
             } message: { msg in
                 Text(msg)
             }
-            .sheet(isPresented: $isCloneSheetPresented) {
-                CloneRepoSheet()
+            .sheet(isPresented: $isNewRepoSheetPresented) {
+                NewRepoSheet()
             }
             .sheet(item: $detailRepo) { repo in
                 RepoDetailSheet(
@@ -94,7 +94,7 @@ struct ContentView: View {
                 let openSettingsAction = openSettings
                 SettingsOpener.open = { openSettingsAction() }
                 UpdateCheckRequester.check = { Task { await updater.check(userInitiated: true) } }
-                CloneSheetRequester.present = { isCloneSheetPresented = true }
+                NewRepoSheetRequester.present = { isNewRepoSheetPresented = true }
                 DockDropHandler.handle = { urls in
                     MainWindowCloseGuard.surfaceMainWindow()
                     for url in urls { addWatchedFolderIfDirectory(url) }
@@ -250,11 +250,11 @@ struct ContentView: View {
             .toolbar {
                 ToolbarItemGroup(placement: .primaryAction) {
                     Button {
-                        isCloneSheetPresented = true
+                        isNewRepoSheetPresented = true
                     } label: {
-                        Label("Clone Repository…", systemImage: "plus")
+                        Label("New Repository…", systemImage: "plus")
                     }
-                    .help("Clone a repository into a watched folder")
+                    .help("Clone or create a repository in a watched folder")
 
                     if viewMode == .card {
                         tagFilterMenu
@@ -480,15 +480,18 @@ struct ContentView: View {
     /// After trashing a repo, cleans up the now-empty intermediate folders it
     /// left behind (e.g. cloning `org/module/part/repo` leaves `module/part`
     /// behind once `repo` is gone). Walks upward one directory at a time,
-    /// removing each as long as it's empty, stopping at the watched root
-    /// (never removed) or the first non-empty ancestor (e.g. a sibling
-    /// `module1` folder under `org`).
+    /// removing each as long as `EmptyDirectoryCheck` says it's safe to
+    /// (ignoring Finder's `.DS_Store`, never touching a separately-watched
+    /// folder), stopping at the watched root (never removed) or the first
+    /// non-removable ancestor (e.g. a sibling `module1` folder under `org`).
     private func removeEmptyParents(of url: URL, stoppingAt root: URL) {
         let rootPath = root.standardizedFileURL.path
+        let watchedPaths = Set(foldersStore.folders.paths)
         var parent = url.deletingLastPathComponent().standardizedFileURL
         while parent.path != rootPath, parent.path.hasPrefix(rootPath + "/") {
             guard let contents = try? FileManager.default.contentsOfDirectory(atPath: parent.path),
-                  contents.isEmpty else { break }
+                  EmptyDirectoryCheck.isRemovable(path: parent.path, contents: contents, watchedPaths: watchedPaths)
+            else { break }
             guard (try? FileManager.default.removeItem(at: parent)) != nil else { break }
             parent = parent.deletingLastPathComponent().standardizedFileURL
         }

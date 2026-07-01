@@ -2,6 +2,13 @@
 
 All notable changes to **LmR** ("Launch my Repo") are documented here, newest first.
 
+## [1.3.0] — 2026-06-30
+
+- **Create a new local repo.** The dialog used for cloning (⌘N / toolbar "New Repository…") now has a Clone / Create New switch — pick a destination folder and a name to `git init` a brand-new repo without leaving LmR. Repos with no commits yet show "No commits yet…" instead of git status, on both cards and rows.
+- **Add a remote after the fact.** Repos with no remote yet (like one just created locally) get an "Add Remote…" option in the repo detail sheet's Remotes section — once added, the browser button and remote-based search pick it up immediately, no refresh needed.
+- **Fixed:** git status could briefly show stale data after hitting Refresh or finishing a clone. A status probe still running when the cache was cleared could land after, and overwrite, a fresher probe for the same repo.
+- **Fixed:** a rare hang when checking git status or cloning a repo whose `git` process wrote enough to stderr to fill the OS pipe buffer (e.g. `git clone --progress` on a large repo) — stdout and stderr are now drained concurrently instead of one after the other.
+
 ## [1.2.0] — 2026-06-28
 
 - **Drag a folder onto the window to add it.** Drop one or more folders anywhere on the main window, onto the empty-state placeholder, or onto the Dock icon, to add each as a watched root and scan it immediately, without opening Settings.
@@ -27,6 +34,7 @@ LmR ("Launch my Repo") is a native macOS dashboard for your local git repositori
 - **Dock or menu bar.** Run with a Dock icon or as a menu-bar-only accessory app.
 - **Self-updating.** Checks GitHub for new releases and installs them in place.
 
+[1.3.0]: https://github.com/VladGavrila/LmR/releases/tag/v1.3.0
 [1.2.0]: https://github.com/VladGavrila/LmR/releases/tag/v1.2.0
 [1.1.0]: https://github.com/VladGavrila/LmR/releases/tag/v1.1.0
 [1.0.0]: https://github.com/VladGavrila/LmR/releases/tag/v1.0.0

@@ -84,7 +84,7 @@ struct GitStatusBadge: View {
                 .truncationMode(.tail)
                 .help(lastCommitInline ? committerTooltip : lastCommitTooltip(subject: subject))
         } else if status.state == .clean || status.state == .dirty {
-            Text("No commits yet")
+            Text("No commits yet…")
                 .font(.caption)
                 .foregroundStyle(.orange)
                 .lineLimit(1)

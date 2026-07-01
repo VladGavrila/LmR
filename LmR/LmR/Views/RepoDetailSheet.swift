@@ -6,8 +6,13 @@ struct RepoDetailSheet: View {
     let displayName: String
 
     @Environment(GitStatusCache.self) private var gitStatusCache
+    @Environment(RepoStore.self) private var repoStore
     @Environment(\.dismiss) private var dismiss
     @State private var loader = RepoDetailLoader()
+    @State private var remoteAdder = RemoteAdder()
+    @State private var isAddingRemote = false
+    @State private var newRemoteName = "origin"
+    @State private var newRemoteURL = ""
 
     var body: some View {
         VStack(spacing: 0) {
@@ -116,7 +121,19 @@ struct RepoDetailSheet: View {
     private var remotesSection: some View {
         sectionHeader("Remotes")
         if loader.remotes.isEmpty {
-            placeholder(loader.isLoading ? "Loading…" : "No remotes.")
+            if isAddingRemote {
+                addRemoteForm
+            } else {
+                HStack {
+                    placeholder(loader.isLoading ? "Loading…" : "No remotes.")
+                    if !loader.isLoading {
+                        Spacer()
+                        Button("Add Remote…") { isAddingRemote = true }
+                            .buttonStyle(.plain)
+                            .foregroundStyle(Color.accentColor)
+                    }
+                }
+            }
         } else {
             VStack(alignment: .leading, spacing: 4) {
                 ForEach(loader.remotes, id: \.name) { remote in
@@ -147,6 +164,66 @@ struct RepoDetailSheet: View {
                 }
             }
         }
+    }
+
+    /// Only shown when `loader.remotes` is empty — adding to a repo that
+    /// already has a remote (or editing an existing one) is out of scope.
+    @ViewBuilder
+    private var addRemoteForm: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                TextField("Name", text: $newRemoteName)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 90)
+                TextField("https://github.com/org/repo.git", text: $newRemoteURL)
+                    .textFieldStyle(.roundedBorder)
+                    .disableAutocorrection(true)
+            }
+            if case .error(let message) = remoteAdder.state {
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+            HStack {
+                Spacer()
+                Button("Cancel") {
+                    isAddingRemote = false
+                    newRemoteURL = ""
+                    remoteAdder.reset()
+                }
+                Button("Save") {
+                    Task { await saveRemote() }
+                }
+                .disabled(isSavingRemote || trimmedNewRemoteName.isEmpty || trimmedNewRemoteURL.isEmpty)
+            }
+        }
+    }
+
+    private var trimmedNewRemoteName: String {
+        newRemoteName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var trimmedNewRemoteURL: String {
+        newRemoteURL.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var isSavingRemote: Bool {
+        if case .saving = remoteAdder.state { return true }
+        return false
+    }
+
+    /// Adds the remote, then syncs it into `RepoStore` (so the card/row's
+    /// browser button appears without a manual refresh) and re-runs `loader`
+    /// to repopulate `remotesSection` from the newly-added remote.
+    private func saveRemote() async {
+        let name = trimmedNewRemoteName
+        let url = trimmedNewRemoteURL
+        let ok = await remoteAdder.addRemote(name: name, url: url, at: repo.normalizedPath)
+        guard ok else { return }
+        repoStore.updateRemoteURL(url, forPath: repo.url)
+        await loader.load(for: repo)
+        isAddingRemote = false
+        newRemoteURL = ""
     }
 
     @ViewBuilder

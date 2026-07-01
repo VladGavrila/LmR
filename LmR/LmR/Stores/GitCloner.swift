@@ -33,7 +33,7 @@ final class GitCloner {
 
         let destination = plan.destination
         let result = await Task.detached(priority: .utility) {
-            Git.run(["clone", "--progress", remoteURL, destination.path])
+            await Git.run(["clone", "--progress", remoteURL, destination.path])
         }.value
 
         guard !Task.isCancelled else { return }
